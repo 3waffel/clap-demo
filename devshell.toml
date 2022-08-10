@@ -1,0 +1,21 @@
+[devshell]
+packages = [
+  "alejandra",
+  "dprint",
+]
+
+[[commands]]
+package = "treefmt"
+category = "formatter"
+
+[[commands]]
+package = "rustWithComponents"
+name = "cargo"
+help = "manage dependencies and the full build cycle of rust programs"
+category = "devtools"
+
+[[commands]]
+package = "rustWithComponents"
+name = "rustc"
+help = "the rust compiler"
+category = "devtools"
