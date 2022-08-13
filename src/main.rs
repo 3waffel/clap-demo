@@ -1,47 +1,25 @@
-use ansi_term::{Colour, Style};
-use clap::{App, Arg, ArgMatches};
+mod cli;
+
+use ansi_term::Colour;
+use clap::ArgMatches;
 use select::document::Document;
 use select::predicate::Name;
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::sync::{Arc, Mutex};
 
 #[tokio::main]
 async fn main() {
-    let matches = App::new("Cook CLI")
-        .version("0.1.0")
-        .author("Wafu")
-        .about("A CLI for learning argument parsing")
-        .arg(
-            Arg::with_name("file")
-                .short('f')
-                .long("file")
-                .takes_value(true)
-                .help("Specify a file to input"),
-        )
-        .arg(
-            Arg::with_name("num")
-                .short('n')
-                .long("number")
-                .takes_value(true)
-                .help("Five less than your fav number"),
-        )
-        .arg(
-            Arg::with_name("req")
-                .short('r')
-                .long("request")
-                .takes_value(true)
-                .help("Extract all links from a webpage"),
-        )
-        .get_matches();
+    let matches = cli::build_cli().get_matches();
 
     file(&matches);
-    num(&matches);
+    count(&matches);
     req(&matches).await.unwrap();
 }
 
 fn file(matches: &ArgMatches) {
-    let path = matches.value_of("file");
+    let path = matches.get_one::<String>("file");
     match path {
         None => {}
         Some(path) => {
@@ -59,22 +37,41 @@ fn file(matches: &ArgMatches) {
     }
 }
 
-fn num(matches: &ArgMatches) {
-    let num_str = matches.value_of("num");
+fn count(matches: &ArgMatches) {
+    let num_str = matches.get_one::<String>("count");
     match num_str {
         None => {}
         Some(s) => match s.parse::<i32>() {
-            Ok(n) => println!(
-                "Your fav number must be: {}",
-                Colour::Blue.paint((n + 5).to_string())
-            ),
-            Err(_) => println!("That's not a number!: {}", s),
+            Ok(n) => {
+                let count = Arc::new(Mutex::new(0));
+                let mut handle_vec = vec![];
+
+                for _ in 0..2 {
+                    let count_clone = Arc::clone(&count);
+                    let handle = std::thread::spawn(move || {
+                        for _ in if n > 0 {0..n} else {n..0} {
+                            *count_clone.lock().unwrap() += n.clamp(-1, 1);
+                        }
+                    });
+                    handle_vec.push(handle);
+                }
+
+                handle_vec
+                    .into_iter()
+                    .for_each(|handle| handle.join().unwrap());
+                println!(
+                    "The number is: {}",
+                    Colour::Blue.paint((&count.lock().unwrap()).to_string())
+                )
+            }
+
+            Err(_) => println!("That's not a number!: {}", Colour::Red.paint(s)),
         },
     }
 }
 
 async fn req(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
-    let url = matches.value_of("req");
+    let url = matches.get_one::<String>("req");
     match url {
         None => {}
         Some(url) => {
