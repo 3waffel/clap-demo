@@ -109,10 +109,15 @@ version = "0.1.0"
 dependencies = [
  "ansi_term",
  "clap",
+ "cook-utils",
  "reqwest",
  "select",
  "tokio",
 ]
+
+[[package]]
+name = "cook-utils"
+version = "0.1.0"
 
 [[package]]
 name = "core-foundation"

@@ -26,4 +26,11 @@ pub fn build_cli() -> App<'static> {
                 .takes_value(true)
                 .help("Extract all links from a webpage"),
         )
+        .arg(
+            Arg::with_name("tree")
+                .short('t')
+                .long("tree")
+                .takes_value(true)
+                .help("Build a tree"),
+        )
 }

@@ -2,6 +2,7 @@ mod cli;
 
 use ansi_term::Colour;
 use clap::ArgMatches;
+use cook_utils::*;
 use select::document::Document;
 use select::predicate::Name;
 use std::error::Error;
@@ -13,12 +14,13 @@ use std::sync::{Arc, Mutex};
 async fn main() {
     let matches = cli::build_cli().get_matches();
 
-    file(&matches);
-    count(&matches);
-    req(&matches).await.unwrap();
+    read_file(&matches);
+    thread_count(&matches);
+    make_request(&matches).await.unwrap();
+    build_tree(&matches);
 }
 
-fn file(matches: &ArgMatches) {
+fn read_file(matches: &ArgMatches) {
     let path = matches.get_one::<String>("file");
     match path {
         None => {}
@@ -37,7 +39,7 @@ fn file(matches: &ArgMatches) {
     }
 }
 
-fn count(matches: &ArgMatches) {
+fn thread_count(matches: &ArgMatches) {
     let num_str = matches.get_one::<String>("count");
     match num_str {
         None => {}
@@ -49,7 +51,7 @@ fn count(matches: &ArgMatches) {
                 for _ in 0..2 {
                     let count_clone = Arc::clone(&count);
                     let handle = std::thread::spawn(move || {
-                        for _ in if n > 0 {0..n} else {n..0} {
+                        for _ in if n > 0 { 0..n } else { n..0 } {
                             *count_clone.lock().unwrap() += n.clamp(-1, 1);
                         }
                     });
@@ -70,7 +72,7 @@ fn count(matches: &ArgMatches) {
     }
 }
 
-async fn req(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+async fn make_request(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let url = matches.get_one::<String>("req");
     match url {
         None => {}
@@ -83,4 +85,19 @@ async fn req(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         }
     }
     Ok(())
+}
+
+fn build_tree(matches: &ArgMatches) {
+    let str = matches.get_one::<String>("tree");
+    match str {
+        None => {}
+        Some(str) => {
+            let mut nodes = vec![];
+            let _ = str.split_ascii_whitespace().for_each(|e| {
+                nodes.push(e.parse::<i32>().expect("Error input"));
+            });
+            println!("{:?}", &nodes);
+            println!("{:#?}", tree!(1, tree!(1, tree!(1, tree!(1), None), None), None));
+        }
+    }
 }
