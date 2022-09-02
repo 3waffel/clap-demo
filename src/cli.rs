@@ -17,7 +17,7 @@ pub fn build_cli() -> App<'static> {
                 .short('c')
                 .long("count")
                 .takes_value(true)
-                .help("Count the number"),
+                .help("Count the number in multiple threads"),
         )
         .arg(
             Arg::with_name("req")
@@ -27,10 +27,10 @@ pub fn build_cli() -> App<'static> {
                 .help("Extract all links from a webpage"),
         )
         .arg(
-            Arg::with_name("tree")
-                .short('t')
-                .long("tree")
-                .takes_value(true)
-                .help("Build a tree"),
+            Arg::with_name("guess")
+                .short('g')
+                .long("guess")
+                .takes_value(false)
+                .help("Start guessing"),
         )
 }

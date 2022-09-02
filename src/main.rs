@@ -1,14 +1,13 @@
-mod cli;
-
 use ansi_term::Colour;
 use clap::ArgMatches;
-use cook_utils::*;
 use select::document::Document;
 use select::predicate::Name;
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::sync::{Arc, Mutex};
+
+mod cli;
 
 #[tokio::main]
 async fn main() {
@@ -17,7 +16,7 @@ async fn main() {
     read_file(&matches);
     thread_count(&matches);
     make_request(&matches).await.unwrap();
-    build_tree(&matches);
+    run_guess(&matches).await.unwrap();
 }
 
 fn read_file(matches: &ArgMatches) {
@@ -48,11 +47,13 @@ fn thread_count(matches: &ArgMatches) {
                 let count = Arc::new(Mutex::new(0));
                 let mut handle_vec = vec![];
 
-                for _ in 0..2 {
+                for i in 0..2 {
                     let count_clone = Arc::clone(&count);
                     let handle = std::thread::spawn(move || {
                         for _ in if n > 0 { 0..n } else { n..0 } {
-                            *count_clone.lock().unwrap() += n.clamp(-1, 1);
+                            let mut count_lock = count_clone.lock().unwrap();
+                            *count_lock += n.clamp(-1, 1);
+                            println!("thread {}: {}", i, count_lock);
                         }
                     });
                     handle_vec.push(handle);
@@ -87,17 +88,52 @@ async fn make_request(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn build_tree(matches: &ArgMatches) {
-    let str = matches.get_one::<String>("tree");
-    match str {
-        None => {}
-        Some(str) => {
-            let mut nodes = vec![];
-            let _ = str.split_ascii_whitespace().for_each(|e| {
-                nodes.push(e.parse::<i32>().expect("Error input"));
-            });
-            println!("{:?}", &nodes);
-            println!("{:#?}", tree!(1, tree!(1, tree!(1, tree!(1), None), None), None));
+use std::io::{stdin, stdout, Write};
+async fn run_guess(matches: &ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
+    if matches.contains_id("guess") {
+        let word: String = String::from("cheese");
+        let mut answer = "_".repeat(word.len());
+        let mut input = String::new();
+        let mut lives: u32 = 3;
+
+        let flush = stdout().flush();
+        flush.expect("failed to flush stdout");
+
+        loop {
+            println!("{}", answer);
+            stdin().read_line(&mut input).expect("invalid input");
+
+            if input.len() == 2 {
+                let c = input.chars().next().expect("no character found");
+
+                if word.find(c) == None {
+                    lives -= 1;
+                }
+                answer = answer
+                    .chars()
+                    .enumerate()
+                    .map(|(i, x)| {
+                        if word.chars().nth(i).unwrap() == c {
+                            c
+                        } else {
+                            x
+                        }
+                    })
+                    .collect::<String>();
+            } else {
+                println!("Please enter a single character");
+            }
+
+            if lives == 0 {
+                println!("You died");
+                return Ok(());
+            }
+            if answer == word {
+                break;
+            }
+            input = "".to_owned();
         }
+        println!("Congratulations!");
     }
+    Ok(())
 }

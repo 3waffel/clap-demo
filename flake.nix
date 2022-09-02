@@ -15,6 +15,10 @@
       url = "github:edolstra/flake-compat";
       flake = false;
     };
+    nocargo = {
+      url = "github:oxalica/nocargo";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -24,9 +28,10 @@
     devshell,
     naersk,
     fenix,
+    nocargo,
     ...
   }:
-    utils.lib.eachDefaultSystem (
+    utils.lib.eachSystem ["x86_64-linux"] (
       system: let
         pkgs = import nixpkgs {
           inherit system;
@@ -57,17 +62,25 @@
             cargo = toolchain;
             rustc = toolchain;
           };
-        buildInputs = with pkgs; [
+        nativeBuildInputs = with pkgs; [
           openssl
           pkg-config
         ];
-      in rec {
-        packages.default = naersk-lib.buildPackage {
-          pname = "cook";
+        ws = nocargo.lib.${system}.mkRustPackageOrWorkspace {
           src = ./.;
-          inherit buildInputs;
+          extraRegistries = {};
+          gitSrcs = {};
         };
-
+      in rec {
+        packages =
+          ws.release
+          // {
+            default = naersk-lib.buildPackage {
+              pname = "cook";
+              src = ./.;
+              inherit nativeBuildInputs;
+            };
+          };
         apps.default = utils.lib.mkApp {drv = packages.default;};
 
         devShells.default = pkgs.devshell.mkShell {
